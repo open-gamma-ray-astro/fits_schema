@@ -1,9 +1,17 @@
+'''
+Schema definitions for FITS binary table extensions
+
+See section 7.3 of the FITS standard:
+https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf
+'''
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import astropy.units as u
+from .header import HeaderSchema, HeaderCard
 from .exceptions import (
     UnitError, DimError, DataTypeError, RequiredMissing, ShapeError,
 )
+from astropy.io import fits
 
 
 class Column(metaclass=ABCMeta):
@@ -54,12 +62,19 @@ class BinaryTableMeta(type):
     '''Metaclass for the BinaryTable class'''
     def __new__(cls, name, bases, dct):
         dct['__columns__'] = []
-        dct['__slots__'] = ('__data__', )
+        dct['__slots__'] = ('__data__', 'header')
 
         for k, v in dct.items():
             if isinstance(v, Column):
                 dct['__columns__'].append(v)
 
+        header_schema = dct.get('__header_schema__')
+        if header_schema is not None and not isinstance(header_schema, HeaderSchema):
+            raise TypeError(
+                '`__header_schema__` must be a class inheriting from `HeaderSchema`'
+            )
+
+        dct['__header_schema__'] = header_schema or HeaderSchema
 
         new_cls = super().__new__(cls, name, bases, dct)
         return new_cls
@@ -79,6 +94,7 @@ class BinaryTable(metaclass=BinaryTableMeta):
 
     def __init__(self, **column_data):
         self.__data__ = {}
+        self.header = fits.Header()
 
         for k, v in column_data.items():
             setattr(self, k, v)
