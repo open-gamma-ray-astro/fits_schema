@@ -11,3 +11,6 @@ install:
 script:
     - flake8 fits_schema
     - poetry run python -m pytest --cov fits_schema --cov-report=xml tests/
+
+after_success:
+  - codecov
