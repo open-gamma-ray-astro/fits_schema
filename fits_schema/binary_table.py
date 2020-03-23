@@ -53,11 +53,13 @@ class Column(metaclass=ABCMeta):
 class BinaryTableMeta(type):
     '''Metaclass for the BinaryTable class'''
     def __new__(cls, name, bases, dct):
-        dct['columns'] = []
+        dct['__columns__'] = []
+        dct['__slots__'] = ('__data__', )
 
         for k, v in dct.items():
             if isinstance(v, Column):
-                dct['columns'].append(v)
+                dct['__columns__'].append(v)
+
 
         new_cls = super().__new__(cls, name, bases, dct)
         return new_cls
@@ -82,7 +84,7 @@ class BinaryTable(metaclass=BinaryTableMeta):
             setattr(self, k, v)
 
     def validate(self):
-        for col in self.columns:
+        for col in self.__columns__:
             validated = col.validate_data(self)
             if validated is not None:
                 setattr(self, col.name, validated)
