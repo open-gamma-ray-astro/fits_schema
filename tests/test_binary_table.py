@@ -22,6 +22,39 @@ def test_unit():
         table.validate()
 
 
+def test_repr():
+    from fits_schema.binary_table import BinaryTable, Double
+
+    class TestTable(BinaryTable):
+        test = Double()
+
+    assert repr(TestTable.test) == "Double(name='test', required=True, unit=None)"
+
+    TestTable.test.unit = u.m
+    assert repr(TestTable.test) == "Double(name='test', required=True, unit='m')"
+
+    TestTable.test.unit = u.m**-2
+    assert repr(TestTable.test) == "Double(name='test', required=True, unit='m-2')"
+
+
+def test_access():
+    from fits_schema.binary_table import BinaryTable, Double
+
+    class TestTable(BinaryTable):
+        test = Double(required=False)
+
+    t = TestTable()
+    assert t.test is None
+    t.test = 5.0
+    assert t.test == 5.0
+
+    # assignment does not validate
+    t.test == 'foo'
+
+    del t.test
+    assert t.test is None
+
+
 def test_shape():
     from fits_schema.binary_table import BinaryTable, Double
 

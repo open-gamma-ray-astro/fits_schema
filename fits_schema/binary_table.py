@@ -19,7 +19,7 @@ class Column(metaclass=ABCMeta):
         if instance is None:
             return self
 
-        return instance.__data__[self.name]
+        return instance.__data__.get(self.name)
 
     def __set__(self, instance, value):
         instance.__data__[self.name] = value
@@ -29,12 +29,14 @@ class Column(metaclass=ABCMeta):
 
     def __delete__(self, instance):
         '''clear data of this column'''
-        del instance.__data__[self.name]
+        if self.name in instance.__data__:
+            del instance.__data__[self.name]
 
     def __repr__(self):
+        unit = f'\'{self.unit.to_string("fits")}\'' if self.unit is not None else None
         return (
             f'{self.__class__.__name__}('
-            f'name={self.name}, required={self.required}, unit={self.unit}'
+            f"name={self.name!r}, required={self.required}, unit={unit}"
             ')'
         )
 
@@ -45,7 +47,7 @@ class Column(metaclass=ABCMeta):
 
     @abstractmethod
     def validate_data():
-        pass
+        '''Validate the data stored in this column'''
 
 
 class BinaryTableMeta(type):
@@ -62,6 +64,17 @@ class BinaryTableMeta(type):
 
 
 class BinaryTable(metaclass=BinaryTableMeta):
+    '''
+    Schema definition class for a binary table
+
+    Attributes
+    ----------
+    validate_column_order: bool
+        If True, validate that the columns are in the same order
+        as in the schema definition.
+    '''
+    validate_column_order = False
+
     def __init__(self, **column_data):
         self.__data__ = {}
 
@@ -77,7 +90,7 @@ class BinaryTable(metaclass=BinaryTableMeta):
 
 class PrimitiveColumn(Column):
     '''
-    A column consisting of a primitive data type.
+    A column consisting of a primitive data type or fixed shape array.
     All non-variable-length array column types
     '''
     def __init__(self, unit=None, required=True, ndim=None, shape=None):
