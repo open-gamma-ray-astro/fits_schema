@@ -14,5 +14,9 @@ class DimError(ValidationError):
     pass
 
 
+class ShapeError(ValidationError):
+    pass
+
+
 class DataTypeError(ValidationError):
     pass

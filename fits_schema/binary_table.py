@@ -1,7 +1,9 @@
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import astropy.units as u
-from .exceptions import UnitError, DimError, DataTypeError, RequiredMissing
+from .exceptions import (
+    UnitError, DimError, DataTypeError, RequiredMissing, ShapeError,
+)
 
 
 class Column(metaclass=ABCMeta):
@@ -76,8 +78,18 @@ class BinaryTable(metaclass=BinaryTableMeta):
 class PrimitiveColumn(Column):
     '''
     A column consisting of a primitive data type.
-    All non-array column types
+    All non-variable-length array column types
     '''
+    def __init__(self, unit=None, required=True, ndim=None, shape=None):
+        super().__init__(required=required, unit=unit)
+
+        self.shape = tuple(shape) if shape is not None else None
+
+        if self.shape is not None:
+            # Dimensionality of the table is one more than that of a single row
+            self.ndim = len(self.shape) + 1
+        else:
+            self.ndim = 1
 
     @property
     @abstractmethod
@@ -87,27 +99,46 @@ class PrimitiveColumn(Column):
     def validate_data(self, table):
         ''' Validate the data of this column in table '''
 
+        # check if column has data
         if self.name not in table.__data__:
             if self.required:
-                raise RequiredMissing('Table is missing required column {self}')
+                raise RequiredMissing(
+                    'Table is missing required column {self}'
+                )
             else:
                 return
 
+        # we have data, so we validate it
         data = table.__data__[self.name]
+
+        # let's test first for the datatype
         try:
-            q = u.Quantity(data, self.unit, copy=False, ndmin=1)
+            # casting = 'safe' makes sure we don't change values
+            # e.g. casting doubles to integers will no longer work
+            np.asanyarray(data).astype(self.dtype, casting='safe')
+        except TypeError as e:
+            raise DataTypeError('dtype not convertible to column dtype') from e
+
+        # the rest of the tests is done on a quantity object with correct dtype
+        try:
+            q = u.Quantity(
+                data, self.unit, copy=False, ndmin=1, dtype=self.dtype
+            )
         except u.UnitConversionError as e:
             raise UnitError(str(e)) from None
         except TypeError as e:
             raise DataTypeError(str(e)) from None
 
-        if q.ndim != 1:
-            raise DimError('Data of primitive columns must be 1d')
+        if q.ndim != self.ndim:
+            raise DimError(
+                f'Dimensionality of data is {q.ndim}, should be {self.ndim}'
+            )
 
-        try:
-            q = q.astype(self.dtype)
-        except ValueError as e:
-            raise DataTypeError('dtype not convertible to column dtype') from e
+        shape = q.shape[1:]
+        if self.shape is not None and self.shape != shape:
+            raise ShapeError(
+                'Shape {shape} does not match required shape {self.shape}'
+            )
 
         return q
 
@@ -176,13 +207,3 @@ class ComplexDouble(PrimitiveColumn):
     '''Single precision complex binary table column'''
     tform_code = 'M'
     dtype = np.cdouble
-
-
-class Array32(Column):
-    '''32 bit array descriptor'''
-    tform_code = 'P'
-
-
-class Array64(Column):
-    '''64 bit array descriptor'''
-    tform_code = 'Q'
