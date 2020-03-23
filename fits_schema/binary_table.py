@@ -126,8 +126,6 @@ class PrimitiveColumn(Column):
             )
         except u.UnitConversionError as e:
             raise UnitError(str(e)) from None
-        except TypeError as e:
-            raise DataTypeError(str(e)) from None
 
         if q.ndim != self.ndim:
             raise DimError(
