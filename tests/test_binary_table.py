@@ -54,6 +54,10 @@ def test_access():
     del t.test
     assert t.test is None
 
+    # test that we can only assign to columns
+    with pytest.raises(AttributeError):
+        t.foo = 'bar'
+
 
 def test_shape():
     from fits_schema.binary_table import BinaryTable, Double
