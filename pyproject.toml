@@ -8,10 +8,16 @@ authors = ["Maximilian Nöthe <maximilian.noethe@tu-dortmund.de>"]
 python = "^3.6"
 astropy = ">=3.0"
 numpy = "^1.16"
+codecov = {version = "^2.0.22", optional = true}
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 flake8 = "^3.7.9"
+pytest-cov = "^2.8"
+
+[tool.poetry.extras]
+# additional packages needed on travis
+travis = ["codecov"]
 
 [build-system]
 requires = ["poetry>=1.0"]

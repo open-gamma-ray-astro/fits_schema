@@ -6,8 +6,8 @@ python:
 
 install:
     - pip install poetry
-    - poetry install
+    - poetry install -E travis
 
 script:
     - flake8 fits_schema
-    - poetry run python -m pytest
+    - poetry run python -m pytest --cov fits_schema --cov-report=xml tests/
