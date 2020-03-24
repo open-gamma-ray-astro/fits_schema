@@ -79,7 +79,7 @@ class BinaryTableMeta(type):
         dct['__slots__'] = ('__data__', 'header')
 
         header_schema = dct.pop('__header__', None)
-        if header_schema is not None and not isinstance(header_schema, HeaderSchema):
+        if header_schema is not None and not issubclass(header_schema, HeaderSchema):
             raise TypeError(
                 '`__header__` must be a class inheriting from `HeaderSchema`'
             )
