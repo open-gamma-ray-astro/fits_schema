@@ -30,7 +30,7 @@ deploy:
     script: poetry publish
     distributions: sdist wheel
     skip_existing: true
-    cleanup: false
+    skip_cleanup: true
     on:
         tags: true
         branch: master
