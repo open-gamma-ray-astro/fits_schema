@@ -147,12 +147,14 @@ class HeaderSchema(metaclass=HeaderSchemaMeta):
 
     Example
     -------
-    >>> from fits_schema import BinaryTable, HeaderSchema, HeaderCard, Integer
-    ... class Events(BinaryTable):
-    ...     EVENT_ID = Integer()
+    >>> from fits_schema.binary_table import BinaryTable, Int32
+    >>> from fits_schema.header import HeaderSchema, HeaderCard
+    >>>
+    >>> class Events(BinaryTable):
+    ...    EVENT_ID = Int32()
     ...
-    ...     class __header_schema__(HeaderSchema):
-    ...         HDUCLASS = Card(required=True, value="Events")
+    ...    class __header_schema__(HeaderSchema):
+    ...        HDUCLASS = HeaderCard(required=True, allowed_values="Events")
     '''
     @classmethod
     def validate_header(cls, header: fits.Header):
