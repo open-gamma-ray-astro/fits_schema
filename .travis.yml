@@ -13,17 +13,17 @@ script:
     - poetry run python -m pytest --cov fits_schema --cov-report=xml tests/
 
 after_success:
-  - codecov
+    - codecov
 
 deploy:
-  provider: pypi
-  user: "__token__"
-  password:
-    secure: "y1gkmdCIFKDHOYkSKqWwEessICVED9oGd8g0HEO2D7H4PH05nuitqj8qHtRtw80P1DVRPgvqn2VxckXek3Sb44/6WlxL6PFGmIqZWqSH5fmW/FsncFe+PQLvWndQOpr/Jzl6/geAmeqWlJY3UKykuk36FVrkY7hpY1eKqa8PFlhZvfCwI+iIMVaE+FkHky306vf+In6ZLzBIuZEGcDzST7RPcHRjagWMm5ssU6BAeLorta0wqCR6O/rloqiav+yTSeU8v6c+XMnGeICFz8rMqNzo/PU+6L6iIk5wP/86eV5m8mMwoCXzOM5FYaJrYDbayf3F4JEFi/4NbGvR1eUHhCupqMMUXacogrJdciqcnJuOCQ6xYIFd9+pec/77wYa4+QDuX9xe4+a6RZjaGUFg3Zxqri9zH/7RFXSOjJBWHSph+efq38SW6NGBZEzMtJMG6cVbwg+HFvQ0WDk04R5vu1TilYEESpYBY04Ffq11RuVuH8AmiZzSO1MWs2UAOia3HWxstezySBpmxM4i7hhasKyhbMmMhlReYeMbeUBnYxChLfAykJObNxNLDgG1QFP44964iSr9nTxJLvdT/5cI/YQcmDyabUJyjJKjQ1rL2Ab3mbygS5daUZytSnpuD7o61zfJyA4wWRYk9Om+8I2OJPLn7hygt7ZoTy0KzPZAlhE="
-  distributions: sdist wheel
-  skip_existing: true
-  skip_cleanup: true
-  on:
-    tags: true
-    branch: master
-    condition: $TRAVIS_PYTHON_VERSION = "3.7"
+    provider: pypi
+    user: "__token__"
+    password:
+        secure: "y1gkmdCIFKDHOYkSKqWwEessICVED9oGd8g0HEO2D7H4PH05nuitqj8qHtRtw80P1DVRPgvqn2VxckXek3Sb44/6WlxL6PFGmIqZWqSH5fmW/FsncFe+PQLvWndQOpr/Jzl6/geAmeqWlJY3UKykuk36FVrkY7hpY1eKqa8PFlhZvfCwI+iIMVaE+FkHky306vf+In6ZLzBIuZEGcDzST7RPcHRjagWMm5ssU6BAeLorta0wqCR6O/rloqiav+yTSeU8v6c+XMnGeICFz8rMqNzo/PU+6L6iIk5wP/86eV5m8mMwoCXzOM5FYaJrYDbayf3F4JEFi/4NbGvR1eUHhCupqMMUXacogrJdciqcnJuOCQ6xYIFd9+pec/77wYa4+QDuX9xe4+a6RZjaGUFg3Zxqri9zH/7RFXSOjJBWHSph+efq38SW6NGBZEzMtJMG6cVbwg+HFvQ0WDk04R5vu1TilYEESpYBY04Ffq11RuVuH8AmiZzSO1MWs2UAOia3HWxstezySBpmxM4i7hhasKyhbMmMhlReYeMbeUBnYxChLfAykJObNxNLDgG1QFP44964iSr9nTxJLvdT/5cI/YQcmDyabUJyjJKjQ1rL2Ab3mbygS5daUZytSnpuD7o61zfJyA4wWRYk9Om+8I2OJPLn7hygt7ZoTy0KzPZAlhE="
+    distributions: sdist wheel
+    skip_existing: true
+    skip_cleanup: true
+    on:
+        tags: true
+        branch: master
+        condition: $TRAVIS_PYTHON_VERSION = "3.7"
