@@ -7,20 +7,32 @@ https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import astropy.units as u
-from .header import HeaderSchema, HeaderCard
+from .header import HeaderSchema, HeaderCard, HeaderSchemaMeta
 from .exceptions import (
     UnitError, DimError, DataTypeError, RequiredMissing, ShapeError,
 )
 from astropy.io import fits
 
 
+class BinaryTableHeader(HeaderSchema):
+    '''default binary table header schema'''
+    XTENSION = HeaderCard(allowed_values='BINTABLE', position=0)
+    BITPIX = HeaderCard(allowed_values=8, position=1)
+    NAXIS = HeaderCard(allowed_values=2, position=2)
+    NAXIS1 = HeaderCard(type_=int, position=3)
+    NAXIS2 = HeaderCard(type_=int, position=4)
+    PCOUNT = HeaderCard(type_=int, position=5)
+    GCOUNT = HeaderCard(allowed_values=1, position=6)
+    TFIELDS = HeaderCard(type_=int, position=7)
+
+
 class Column(metaclass=ABCMeta):
     '''Base class for the column descriptors'''
 
-    def __init__(self, unit=None, required=True):
+    def __init__(self, *, unit=None, required=True, name=None):
         self.required = required
         self.unit = unit
-        self.name = None
+        self.name = name
 
     def __get__(self, instance, owner=None):
         # class attribute access
@@ -33,7 +45,9 @@ class Column(metaclass=ABCMeta):
         instance.__data__[self.name] = value
 
     def __set_name__(self, owner, name):
-        self.name = name
+        # respect user override for names that are not valid identifiers
+        if self.name is None:
+            self.name = name
 
     def __delete__(self, instance):
         '''clear data of this column'''
@@ -61,20 +75,41 @@ class Column(metaclass=ABCMeta):
 class BinaryTableMeta(type):
     '''Metaclass for the BinaryTable class'''
     def __new__(cls, name, bases, dct):
-        dct['__columns__'] = []
+        dct['__columns__'] = {}
         dct['__slots__'] = ('__data__', 'header')
 
-        for k, v in dct.items():
-            if isinstance(v, Column):
-                dct['__columns__'].append(v)
-
-        header_schema = dct.get('__header_schema__')
+        header_schema = dct.pop('__header__', None)
         if header_schema is not None and not isinstance(header_schema, HeaderSchema):
             raise TypeError(
-                '`__header_schema__` must be a class inheriting from `HeaderSchema`'
+                '`__header__` must be a class inheriting from `HeaderSchema`'
             )
 
-        dct['__header_schema__'] = header_schema or HeaderSchema
+        # create a new header schema class for this table
+        dct['__header__'] = HeaderSchemaMeta.__new__(
+            HeaderSchemaMeta, name + 'Header', (BinaryTableHeader, ), {},
+        )
+
+        # inherit header schema and  from bases
+        for base in reversed(bases):
+            if hasattr(base, '__header__'):
+                dct['__header__'].update(base.__header__)
+
+            if issubclass(base, BinaryTable):
+                dct['__columns__'].update(base.__columns__)
+
+        # collect columns of this new schema
+        for k, v in dct.items():
+            if isinstance(v, Column):
+                k = v.name or k
+                dct['__columns__'][k] = v
+
+        # add header cards for the columsn
+        cards = dct['__header__'].__cards__
+        for i, (name, c) in enumerate(dct['__columns__'].items(), start=1):
+            cards[f'TTYPE{i}'] = HeaderCard(f'TTYPE{i}', allowed_values=[name])
+            if c.unit is not None:
+                cards[f'TUNIT{i}'] = HeaderCard(f'TUNIT{i}', type_=str)
+            cards[f'TFORM{i}'] = HeaderCard(f'TFORM{i}', type_=str)
 
         new_cls = super().__new__(cls, name, bases, dct)
         return new_cls
@@ -99,11 +134,22 @@ class BinaryTable(metaclass=BinaryTableMeta):
         for k, v in column_data.items():
             setattr(self, k, v)
 
-    def validate(self):
-        for col in self.__columns__:
+    def validate_data(self):
+        for k, col in self.__columns__.items():
             validated = col.validate_data(self)
             if validated is not None:
-                setattr(self, col.name, validated)
+                setattr(self, k, validated)
+
+    @classmethod
+    def validate_hdu(cls, hdu: fits.BinTableHDU):
+        if not isinstance(hdu, fits.BinTableHDU):
+            raise TypeError('hdu is not a BinTableHDU')
+
+        cls.__header__.validate_header(hdu.header)
+        required = set(c.name for c in cls.__columns__.values() if c.required)
+        missing = required - set(c.name for c in hdu.columns)
+        if missing:
+            raise RequiredMissing(f'The following required columns are missing {missing}')
 
 
 class PrimitiveColumn(Column):
