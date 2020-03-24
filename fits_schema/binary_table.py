@@ -103,14 +103,6 @@ class BinaryTableMeta(type):
                 k = v.name or k
                 dct['__columns__'][k] = v
 
-        # add header cards for the columsn
-        cards = dct['__header__'].__cards__
-        for i, (name, c) in enumerate(dct['__columns__'].items(), start=1):
-            cards[f'TTYPE{i}'] = HeaderCard(f'TTYPE{i}', allowed_values=[name])
-            if c.unit is not None:
-                cards[f'TUNIT{i}'] = HeaderCard(f'TUNIT{i}', type_=str)
-            cards[f'TFORM{i}'] = HeaderCard(f'TFORM{i}', type_=str)
-
         new_cls = super().__new__(cls, name, bases, dct)
         return new_cls
 
