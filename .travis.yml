@@ -12,7 +12,8 @@ install:
 
 script:
     - flake8 fits_schema
-    - poetry run python -m pytest \
+    - |
+      poetry run python -m pytest \
       --doctest-modules \
       --cov fits_schema --cov-report=xml \
       tests fits_schema
