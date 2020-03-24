@@ -20,7 +20,9 @@ script:
 
 after_success:
     - codecov
-    - poetry config http-basic.pypi __token__ $PYPI_TOKEN
+
+before_deploy:
+    - poetry config pypi-token.pypi $PYPI_TOKEN
     - poetry build
 
 deploy:
