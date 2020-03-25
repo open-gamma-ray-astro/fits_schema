@@ -161,7 +161,8 @@ class BinaryTable(metaclass=BinaryTableMeta):
 
         table = Table.read(hdu)
         for k, col in cls.__columns__.items():
-            col.validate_data(table[k])
+            if k in table.columns:
+                col.validate_data(table[k])
 
 
 class PrimitiveColumn(Column):

@@ -169,6 +169,25 @@ def test_validate_hdu():
     TestTable.validate_hdu(hdu)
 
 
+def test_optional_columns():
+    from fits_schema.binary_table import BinaryTable, Double
+
+    class TestTable(BinaryTable):
+        energy = Double(unit=u.TeV)
+        ra = Double(unit=u.deg)
+        dec = Double(unit=u.deg, required=False)
+
+    data = {
+        'energy': 10**np.random.uniform(-1, 2, 100) * u.TeV,
+        'ra': np.random.uniform(0, 360, 100) * u.deg,
+    }
+
+    # make sure a correct table passes validation
+    t = Table(data)
+    hdu = fits.BinTableHDU(t)
+    TestTable.validate_hdu(hdu)
+
+
 def test_header_not_schema():
     from fits_schema.binary_table import BinaryTable
 
