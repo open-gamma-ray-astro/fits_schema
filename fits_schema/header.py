@@ -196,7 +196,7 @@ class HeaderSchema(metaclass=HeaderSchemaMeta):
             if kw not in cls.__cards__:
                 if kw[:5] not in IGNORE:
                     log_or_raise(
-                        f'Unexpected header card "{card}"',
+                        f'Unexpected header card "{str(card).strip()}"',
                         AdditionalHeaderCard,
                         log=log,
                         onerror=onerror
