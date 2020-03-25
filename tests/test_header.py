@@ -131,3 +131,29 @@ def test_inheritance():
     assert len(Header.__cards__) == 2
     assert list(Header.__cards__) == ['FOO', 'BAR']
     assert Header.BAR.type == int
+
+
+def test_invalid_arguments():
+    from fits_schema.header import HeaderCard
+
+    with pytest.raises(ValueError):
+        HeaderCard(allowed_values=[(1, 2, 3)])
+
+    with pytest.raises(TypeError):
+        # allowed values does not match allowed type
+        HeaderCard(type_=str, allowed_values=1)
+
+
+def test_additional():
+    from fits_schema.header import HeaderSchema, HeaderCard
+    from fits_schema.exceptions import AdditionalHeaderCard
+
+    class Header(HeaderSchema):
+        TEST = HeaderCard()
+
+    h = fits.Header()
+    h['TEST'] = 'foo'
+    h['FOO'] = 'bar'
+
+    with pytest.warns(AdditionalHeaderCard):
+        Header.validate_header(h)
