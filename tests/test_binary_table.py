@@ -155,3 +155,39 @@ def test_validate_hdu():
     })
     hdu = fits.BinTableHDU(t)
     TestTable.validate_hdu(hdu)
+
+
+def test_header_not_schema():
+    from fits_schema.binary_table import BinaryTable
+
+    with pytest.raises(TypeError):
+        class Table(BinaryTable):
+            # should inherit from HeaderSchema
+            class __header__:
+                pass
+
+
+def test_header():
+    from fits_schema.binary_table import BinaryTable, Double
+    from fits_schema.header import HeaderSchema, HeaderCard
+
+    class TestTable(BinaryTable):
+        energy = Double(unit=u.TeV)
+
+        class __header__(HeaderSchema):
+            TEST = HeaderCard(type_=str)
+
+    t = Table({'energy': [1, 2, 3] * u.TeV})
+    hdu = fits.BinTableHDU(t)
+
+    with pytest.raises(RequiredMissing):
+        TestTable.validate_hdu(hdu)
+
+    t.meta['TEST'] = 5
+    hdu = fits.BinTableHDU(t)
+    with pytest.raises(DataTypeError):
+        TestTable.validate_hdu(hdu)
+
+    t.meta['TEST'] = 'hello'
+    hdu = fits.BinTableHDU(t)
+    TestTable.validate_hdu(hdu)
