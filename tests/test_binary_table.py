@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 
 from fits_schema.exceptions import (
-    UnitError, DataTypeError, RequiredMissing, DimError, ShapeError,
+    WrongUnit, WrongType, RequiredMissing, WrongDims, WrongShape,
 )
 
 
@@ -20,7 +20,7 @@ def test_unit():
     assert (table.test == u.Quantity([1, 2, 3], u.m)).all()
 
     table = TestTable(test=5 * u.deg)
-    with pytest.raises(UnitError):
+    with pytest.raises(WrongUnit):
         table.validate_data()
 
 
@@ -69,12 +69,12 @@ def test_shape():
 
     # single number, wrong number of dimensions
     table = TestTable(test=3.14)
-    with pytest.raises(DimError):
+    with pytest.raises(WrongDims):
         table.validate_data()
 
     # three numbers per row, should be ten
     table = TestTable(test=[[1, 2, 3]])
-    with pytest.raises(ShapeError):
+    with pytest.raises(WrongShape):
         table.validate_data()
 
     # this should work
@@ -114,12 +114,12 @@ def test_data_types():
 
     # double would loose information
     table.test = 3.14
-    with pytest.raises(DataTypeError):
+    with pytest.raises(WrongType):
         table.validate_data()
 
     # too large for int16
     table.test = 2**15
-    with pytest.raises(DataTypeError):
+    with pytest.raises(WrongType):
         table.validate_data()
 
 
@@ -161,7 +161,7 @@ def test_validate_hdu():
     t['dec'] = np.random.uniform(0, 360, 100) * u.TeV
     hdu = fits.BinTableHDU(t)
 
-    with pytest.raises(UnitError):
+    with pytest.raises(WrongUnit):
         TestTable.validate_hdu(hdu)
 
     t['dec'] = np.random.uniform(0, 360, 100) * u.deg
@@ -197,7 +197,7 @@ def test_header():
 
     t.meta['TEST'] = 5
     hdu = fits.BinTableHDU(t)
-    with pytest.raises(DataTypeError):
+    with pytest.raises(WrongType):
         TestTable.validate_hdu(hdu)
 
     t.meta['TEST'] = 'hello'

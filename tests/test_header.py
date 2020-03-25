@@ -1,6 +1,6 @@
 import pytest
 from fits_schema.exceptions import (
-    RequiredMissing, WrongValue, PositionError, DataTypeError,
+    RequiredMissing, WrongValue, WrongPosition, WrongType,
 )
 from astropy.io import fits
 
@@ -36,7 +36,7 @@ def test_position():
     h['SIMPLE'] = True
     h['NAXIS'] = 0
 
-    with pytest.raises(PositionError):
+    with pytest.raises(WrongPosition):
         PrimaryHeader.validate_header(h)
 
 
@@ -71,7 +71,7 @@ def test_type():
         TEST = HeaderCard(type_=str)
 
     h['TEST'] = 5
-    with pytest.raises(DataTypeError):
+    with pytest.raises(WrongType):
         Header.validate_header(h)
 
     h['TEST'] = 'hello'
@@ -86,7 +86,7 @@ def test_type():
     Header.validate_header(h)
 
     h['TEST'] = 5.5
-    with pytest.raises(DataTypeError):
+    with pytest.raises(WrongType):
         Header.validate_header(h)
 
 

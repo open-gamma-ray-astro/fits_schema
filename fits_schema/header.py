@@ -6,7 +6,7 @@ https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf
 '''
 from datetime import date, datetime
 from .exceptions import (
-    RequiredMissing, DataTypeError, PositionError, AdditionalHeaderCard,
+    RequiredMissing, WrongType, WrongPosition, AdditionalHeaderCard,
     WrongValue,
 )
 import re
@@ -108,7 +108,7 @@ class HeaderCard:
                 f'Expected card {k} at position {self.position}'
                 f' but found at {pos}'
             )
-            log_or_raise(msg, PositionError, log, onerror=onerror)
+            log_or_raise(msg, WrongPosition, log, onerror=onerror)
 
         if self.type is not None and not isinstance(card.value, self.type):
             valid = False
@@ -116,7 +116,7 @@ class HeaderCard:
                 f'Header keyword {k} has wrong type {type(card.value)}'
                 f', expected one of {self.type}'
             )
-            log_or_raise(msg, DataTypeError, log, onerror=onerror)
+            log_or_raise(msg, WrongType, log, onerror=onerror)
 
         if self.allowed_values is not None and card.value not in self.allowed_values:
             log_or_raise(

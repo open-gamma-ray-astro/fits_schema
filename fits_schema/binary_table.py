@@ -13,7 +13,7 @@ import logging
 
 from .header import HeaderSchema, HeaderCard, HeaderSchemaMeta
 from .exceptions import (
-    UnitError, DimError, DataTypeError, RequiredMissing, ShapeError,
+    WrongUnit, WrongDims, WrongType, RequiredMissing, WrongShape,
 )
 from .utils import log_or_raise
 
@@ -199,7 +199,7 @@ class PrimitiveColumn(Column):
             # e.g. casting doubles to integers will no longer work
             data = np.asanyarray(data).astype(self.dtype, casting='safe')
         except TypeError as e:
-            raise DataTypeError('dtype not convertible to column dtype') from e
+            raise WrongType('dtype not convertible to column dtype') from e
 
         # the rest of the tests is done on a quantity object with correct dtype
         try:
@@ -207,16 +207,16 @@ class PrimitiveColumn(Column):
                 data, self.unit, copy=False, ndmin=1, dtype=self.dtype
             )
         except u.UnitConversionError as e:
-            raise UnitError(str(e)) from None
+            raise WrongUnit(str(e)) from None
 
         if q.ndim != self.ndim:
-            raise DimError(
+            raise WrongDims(
                 f'Dimensionality of data is {q.ndim}, should be {self.ndim}'
             )
 
         shape = q.shape[1:]
         if self.shape is not None and self.shape != shape:
-            raise ShapeError(
+            raise WrongShape(
                 'Shape {shape} does not match required shape {self.shape}'
             )
 

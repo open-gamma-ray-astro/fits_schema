@@ -6,23 +6,23 @@ class RequiredMissing(ValidationError):
     '''Raised when a required element is missing'''
 
 
-class UnitError(ValidationError):
+class WrongUnit(ValidationError):
     '''Raised when an element does not have the correct unit'''
 
 
-class DimError(ValidationError):
+class WrongDims(ValidationError):
     '''Raised when an element does not have the correct dimensions'''
 
 
-class ShapeError(ValidationError):
+class WrongShape(ValidationError):
     '''Raised when an element does not have the correct shape'''
 
 
-class DataTypeError(ValidationError):
+class WrongType(ValidationError):
     '''Raised when an element does not have the correct data type'''
 
 
-class PositionError(ValidationError):
+class WrongPosition(ValidationError):
     '''Raised when an element is not at the correct position'''
 
 
