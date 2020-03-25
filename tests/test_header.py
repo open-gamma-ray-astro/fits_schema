@@ -1,5 +1,7 @@
 import pytest
-from fits_schema.exceptions import RequiredMissing, WrongValue, PositionError
+from fits_schema.exceptions import (
+    RequiredMissing, WrongValue, PositionError, DataTypeError,
+)
 from astropy.io import fits
 
 
@@ -59,6 +61,61 @@ def test_wrong_value():
     # SIMPLE must be True
     with pytest.raises(WrongValue):
         PrimaryHeader.validate_header(h)
+
+
+def test_type():
+    from fits_schema.header import HeaderSchema, HeaderCard
+    h = fits.Header()
+
+    class Header(HeaderSchema):
+        TEST = HeaderCard(type_=str)
+
+    h['TEST'] = 5
+    with pytest.raises(DataTypeError):
+        Header.validate_header(h)
+
+    h['TEST'] = 'hello'
+    Header.validate_header(h)
+
+    class Header(HeaderSchema):
+        TEST = HeaderCard(type_=[str, int])
+
+    h['TEST'] = 'hello'
+    Header.validate_header(h)
+    h['TEST'] = 5
+    Header.validate_header(h)
+
+    h['TEST'] = 5.5
+    with pytest.raises(DataTypeError):
+        Header.validate_header(h)
+
+
+def test_empty():
+    from fits_schema.header import HeaderSchema, HeaderCard
+    h = fits.Header()
+
+    class Header(HeaderSchema):
+        TEST = HeaderCard(empty=True)
+
+    h['TEST'] = None
+    Header.validate_header(h)
+
+    h['TEST'] = fits.Undefined()
+    Header.validate_header(h)
+
+    h['TEST'] = 'something'
+    with pytest.raises(WrongValue):
+        Header.validate_header(h)
+
+    class Header(HeaderSchema):
+        TEST = HeaderCard(empty=False)
+
+    h['TEST'] = None
+    with pytest.raises(WrongValue):
+        Header.validate_header(h)
+
+    h['TEST'] = 'foo'
+    Header.validate_header(h)
 
 
 def test_inheritance():

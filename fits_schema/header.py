@@ -126,11 +126,15 @@ class HeaderCard:
                 onerror=onerror
             )
 
-        if self.empty is True and card.value is not None:
-            log_or_raise('Card {k} is required to be empty', WrongValue, log, onerror)
+        has_value = not (card.value is None or isinstance(card.value, fits.Undefined))
+        if self.empty is True and has_value:
+            log_or_raise(
+                f'Card {k} is required to be empty but has value {card.value}',
+                WrongValue, log, onerror,
+            )
 
-        if self.empty is False and card.value is None:
-            log_or_raise('Card {k} must not be empty', RequiredMissing, log, onerror)
+        if self.empty is False and not has_value:
+            log_or_raise(f'Card {k} exists but has no value', WrongValue, log, onerror)
 
         return valid
 
