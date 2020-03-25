@@ -121,7 +121,7 @@ class HeaderCard:
         if self.allowed_values is not None and card.value not in self.allowed_values:
             log_or_raise(
                 f'Possible values for {k!r} are {self.allowed_values}'
-                f', found {card.value}',
+                f', found {card.value!r}',
                 WrongValue,
                 log,
                 onerror=onerror
