@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 import numpy as np
 import astropy.units as u
 from astropy.io import fits
+from astropy.table import Table
 import logging
 
 from .header import HeaderSchema, HeaderCard, HeaderSchemaMeta
@@ -74,7 +75,7 @@ class Column(metaclass=ABCMeta):
         ''' The TFORM code of this column, e.g. D for double'''
 
     @abstractmethod
-    def validate_data():
+    def validate_data(data):
         '''Validate the data stored in this column'''
 
 
@@ -138,7 +139,7 @@ class BinaryTable(metaclass=BinaryTableMeta):
 
     def validate_data(self):
         for k, col in self.__columns__.items():
-            validated = col.validate_data(self)
+            validated = col.validate_data(self.__data__.get(k))
             if validated is not None:
                 setattr(self, k, validated)
 
@@ -157,6 +158,10 @@ class BinaryTable(metaclass=BinaryTableMeta):
                 log=log,
                 onerror=onerror
             )
+
+        table = Table.read(hdu)
+        for k, col in cls.__columns__.items():
+            col.validate_data(table[k])
 
 
 class PrimitiveColumn(Column):
@@ -180,26 +185,19 @@ class PrimitiveColumn(Column):
     def dtype():
         '''Equivalent numpy dtype'''
 
-    def validate_data(self, table):
+    def validate_data(self, data):
         ''' Validate the data of this column in table '''
-
-        # check if column has data
-        if self.name not in table.__data__:
+        if data is None:
             if self.required:
-                raise RequiredMissing(
-                    'Table is missing required column {self}'
-                )
+                raise RequiredMissing('Column {self.name} is required but missing')
             else:
                 return
-
-        # we have data, so we validate it
-        data = table.__data__[self.name]
 
         # let's test first for the datatype
         try:
             # casting = 'safe' makes sure we don't change values
             # e.g. casting doubles to integers will no longer work
-            np.asanyarray(data).astype(self.dtype, casting='safe')
+            data = np.asanyarray(data).astype(self.dtype, casting='safe')
         except TypeError as e:
             raise DataTypeError('dtype not convertible to column dtype') from e
 

@@ -143,16 +143,28 @@ def test_validate_hdu():
     from fits_schema.binary_table import BinaryTable, Double
 
     class TestTable(BinaryTable):
-        energy = Double(unit=u.TeV, required=True)
-        ra = Double(unit=u.deg, required=True)
-        dec = Double(unit=u.deg, required=True)
+        energy = Double(unit=u.TeV)
+        ra = Double(unit=u.deg)
+        dec = Double(unit=u.deg)
 
-    # make sure a correct table passes validation
-    t = Table({
+    data = {
         'energy': 10**np.random.uniform(-1, 2, 100) * u.TeV,
         'ra': np.random.uniform(0, 360, 100) * u.deg,
-        'dec': np.random.normal(-90, 90, 100) * u.deg,
-    })
+    }
+
+    # make sure a correct table passes validation
+    t = Table(data)
+    hdu = fits.BinTableHDU(t)
+    with pytest.raises(RequiredMissing):
+        TestTable.validate_hdu(hdu)
+
+    t['dec'] = np.random.uniform(0, 360, 100) * u.TeV
+    hdu = fits.BinTableHDU(t)
+
+    with pytest.raises(UnitError):
+        TestTable.validate_hdu(hdu)
+
+    t['dec'] = np.random.uniform(0, 360, 100) * u.deg
     hdu = fits.BinTableHDU(t)
     TestTable.validate_hdu(hdu)
 
