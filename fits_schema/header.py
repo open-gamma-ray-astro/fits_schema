@@ -13,9 +13,17 @@ import re
 import warnings
 from collections.abc import Iterable
 from astropy.io import fits
+import logging
+
+from .utils import log_or_raise
+
+
+log = logging.getLogger(__name__)
 
 
 HEADER_ALLOWED_TYPES = (str, bool, int, float, complex, date, datetime)
+TABLE_KEYWORDS = {'TTYPE', 'TUNIT', 'TFORM', 'TSCAL', 'TZERO', 'TDISP'}
+IGNORE = TABLE_KEYWORDS
 
 
 class HeaderCard:
@@ -90,32 +98,42 @@ class HeaderCard:
                 )
             self.keyword = name
 
-    def validate(self, card, pos):
+    def validate(self, card, pos, onerror='raise'):
         '''Validate an astropy.io.fits.card.Card'''
+        valid = True
         k = self.keyword
 
         if self.position is not None and self.position != pos:
-            raise PositionError(
+            valid = False
+            msg = (
                 f'Expected card {k} at position {self.position}'
                 f' but found at {pos}'
             )
+            log_or_raise(msg, PositionError, log, onerror=onerror)
 
         if self.type is not None and not isinstance(card.value, self.type):
-            raise DataTypeError(
+            valid = False
+            msg = (
                 f'Header keyword {k} has wrong type {type(card.value)}'
                 f', expected one of {self.type}'
             )
+            log_or_raise(msg, DataTypeError, log, onerror=onerror)
 
         if self.allowed_values is not None and card.value not in self.allowed_values:
-            raise WrongValue(
-                f'Possible values for {k} are {self.allowed_values}, found {card.value}'
+            log_or_raise(
+                f'Possible values for {k} are {self.allowed_values}, found {card.value}',
+                WrongValue,
+                log,
+                onerror=onerror
             )
 
         if self.empty is True and card.value is not None:
-            raise WrongValue('Card {k} is required to be empty')
+            log_or_raise('Card {k} is required to be empty', WrongValue, log, onerror)
 
         if self.empty is False and card.value is None:
-            raise RequiredMissing('Card {k} must not be empty')
+            log_or_raise('Card {k} must not be empty', RequiredMissing, log, onerror)
+
+        return valid
 
 
 class HeaderSchemaMeta(type):
@@ -157,24 +175,32 @@ class HeaderSchema(metaclass=HeaderSchemaMeta):
     ...        HDUCLASS = HeaderCard(required=True, allowed_values="Events")
     '''
     @classmethod
-    def validate_header(cls, header: fits.Header):
+    def validate_header(cls, header: fits.Header, onerror='raise'):
 
         required = {k for k, c in cls.__cards__.items() if c.required}
         missing = required - set(header.keys())
 
         # first let's test for any missing required keys
         if missing:
-            raise RequiredMissing(
-                f"Header is missing the following required keywords: {missing}"
+            log_or_raise(
+                f"Header is missing the following required keywords: {missing}",
+                RequiredMissing, log=log, onerror=onerror,
             )
 
         # no go through each of the header items and validate them with the schema
         for pos, card in enumerate(header.cards):
-            if card.keyword not in cls.__cards__:
-                warnings.warn(f'Unexpected header card "{card}"', AdditionalHeaderCard)
+            kw = card.keyword
+            if kw not in cls.__cards__:
+                if kw[:5] not in IGNORE:
+                    log_or_raise(
+                        f'Unexpected header card "{card}"',
+                        AdditionalHeaderCard,
+                        log=log,
+                        onerror=onerror
+                    )
                 continue
 
-            cls.__cards__[card.keyword].validate(card, pos)
+            cls.__cards__[card.keyword].validate(card, pos, onerror)
 
     @classmethod
     def update(cls, other_schema):

@@ -7,11 +7,17 @@ https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import astropy.units as u
+from astropy.io import fits
+import logging
+
 from .header import HeaderSchema, HeaderCard, HeaderSchemaMeta
 from .exceptions import (
     UnitError, DimError, DataTypeError, RequiredMissing, ShapeError,
 )
-from astropy.io import fits
+from .utils import log_or_raise
+
+
+log = logging.getLogger(__name__)
 
 
 class BinaryTableHeader(HeaderSchema):
@@ -97,6 +103,10 @@ class BinaryTableMeta(type):
             if issubclass(base, BinaryTable):
                 dct['__columns__'].update(base.__columns__)
 
+        if header_schema is not None:
+            # add user defined header last
+            dct['__header__'].update(header_schema)
+
         # collect columns of this new schema
         for k, v in dct.items():
             if isinstance(v, Column):
@@ -133,15 +143,20 @@ class BinaryTable(metaclass=BinaryTableMeta):
                 setattr(self, k, validated)
 
     @classmethod
-    def validate_hdu(cls, hdu: fits.BinTableHDU):
+    def validate_hdu(cls, hdu: fits.BinTableHDU, onerror='raise'):
         if not isinstance(hdu, fits.BinTableHDU):
             raise TypeError('hdu is not a BinTableHDU')
 
-        cls.__header__.validate_header(hdu.header)
+        cls.__header__.validate_header(hdu.header, onerror=onerror)
         required = set(c.name for c in cls.__columns__.values() if c.required)
         missing = required - set(c.name for c in hdu.columns)
         if missing:
-            raise RequiredMissing(f'The following required columns are missing {missing}')
+            log_or_raise(
+                f'The following required columns are missing {missing}',
+                RequiredMissing,
+                log=log,
+                onerror=onerror
+            )
 
 
 class PrimitiveColumn(Column):
