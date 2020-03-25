@@ -147,7 +147,6 @@ def test_validate_hdu():
         ra = Double(unit=u.deg, required=True)
         dec = Double(unit=u.deg, required=True)
 
-    print(TestTable.__header__.__cards__)
     # make sure a correct table passes validation
     t = Table({
         'energy': 10**np.random.uniform(-1, 2, 100) * u.TeV,
