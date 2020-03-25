@@ -10,7 +10,6 @@ from .exceptions import (
     WrongValue,
 )
 import re
-import warnings
 from collections.abc import Iterable
 from astropy.io import fits
 import logging
