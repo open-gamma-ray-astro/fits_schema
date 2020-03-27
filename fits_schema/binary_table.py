@@ -31,6 +31,7 @@ class BinaryTableHeader(HeaderSchema):
     PCOUNT = HeaderCard(type_=int, position=5)
     GCOUNT = HeaderCard(allowed_values=1, position=6)
     TFIELDS = HeaderCard(type_=int, position=7)
+    EXTNAME = HeaderCard(required=False, type_=str)
 
 
 class Column(metaclass=ABCMeta):

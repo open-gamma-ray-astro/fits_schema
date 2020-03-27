@@ -151,7 +151,7 @@ class HeaderSchemaMeta(type):
 
         for k, v in dct.items():
             if isinstance(v, HeaderCard):
-                k = v.keyword or k  # use user override vor keyword if there
+                k = v.keyword or k  # use user override for keyword if there
                 dct['__cards__'][k] = v
 
         new_cls = super().__new__(cls, name, bases, dct)
@@ -178,6 +178,32 @@ class HeaderSchema(metaclass=HeaderSchemaMeta):
     ...    class __header_schema__(HeaderSchema):
     ...        HDUCLASS = HeaderCard(required=True, allowed_values="Events")
     '''
+    # define some common header keywords
+    # see table 22 of https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf
+    DATE = HeaderCard(type_=str, required=False)
+    DATE_OBS = HeaderCard(keyword='DATE-OBS', type_=str, required=False)
+    DATE_BEG = HeaderCard(keyword='DATE-BEG', type_=str, required=False)
+    DATE_AVG = HeaderCard(keyword='DATE-AVG', type_=str, required=False)
+    DATE_END = HeaderCard(keyword='DATE-END', type_=str, required=False)
+
+    MJD_OBS = HeaderCard(keyword='MJD-OBS', type_=float, required=False)
+    MJD_BEG = HeaderCard(keyword='MJD-BEG', type_=float, required=False)
+    MJD_AVG = HeaderCard(keyword='MJD-AVG', type_=float, required=False)
+    MJD_END = HeaderCard(keyword='MJD-END', type_=float, required=False)
+
+    # time definition
+    MJDREF  = HeaderCard(type_=float, required=False)
+    MJDREFI = HeaderCard(type_=int, required=False)
+    MJDREFF = HeaderCard(type_=float, required=False)
+    JDREF   = HeaderCard(type_=float, required=False)
+    JDREFI  = HeaderCard(type_=int, required=False)
+    JDREFF  = HeaderCard(type_=float, required=False)
+    DATEREF = HeaderCard(type_=float, required=False)
+
+    # start / end time relative to reference time
+    TSTART  = HeaderCard(type_=float, required=False)
+    TSTOP   = HeaderCard(type_=float, required=False)
+
     @classmethod
     def validate_header(cls, header: fits.Header, onerror='raise'):
 
