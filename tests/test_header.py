@@ -128,8 +128,8 @@ def test_inheritance():
     class Header(BaseHeader):
         BAR = HeaderCard(type_=int)
 
-    assert len(Header.__cards__) == 2
-    assert list(Header.__cards__) == ['FOO', 'BAR']
+    assert set(Header.__cards__) == set(BaseHeader.__cards__)
+    assert BaseHeader.BAR.type == str
     assert Header.BAR.type == int
 
 
