@@ -39,6 +39,14 @@ def test_unit():
     with pytest.raises(WrongUnit):
         table.validate_data()
 
+    # test strict_unit
+    class TestTable(BinaryTable):
+        test = Double(unit=u.m, strict_unit=True)
+
+    table = TestTable(test=[1, 2, 3] * u.cm)
+    with pytest.raises(WrongUnit):
+        table.validate_data()
+
 
 def test_repr():
     from fits_schema.binary_table import BinaryTable, Double

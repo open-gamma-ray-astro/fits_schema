@@ -35,12 +35,53 @@ class BinaryTableHeader(HeaderSchema):
 
 
 class Column(metaclass=ABCMeta):
-    '''Base class for the column descriptors'''
+    '''
+    A column descriptor for columns consisting of a primitive data type
+    or fixed shape array.
 
-    def __init__(self, *, unit=None, required=True, name=None):
+    Attributes
+    ----------
+    unit: astropy.units.Unit
+        unit of the column
+    strict_unit: bool
+        If True, the unit must match exactly, not only be convertible.
+    required: bool
+        If this column is required (True) or optional (False)
+    name: str
+        Use to specify a different column name than the class attribute name.
+    ndim: int
+        Dimensionality of a single row, numbers have ndim=0.
+        The resulting data column has `ndim_col = ndim + 1`
+    shape: Tuple[int]
+        Shape of a single row.
+    '''
+    def __init__(
+        self, *,
+        unit=None,
+        strict_unit=False,
+        required=True,
+        name=None,
+        ndim=None,
+        shape=None,
+    ):
         self.required = required
         self.unit = unit
+        self.strict_unit = strict_unit
         self.name = name
+        self.shape = shape
+        self.ndim = ndim
+
+        if self.shape is not None:
+            self.shape = tuple(shape)
+            # Dimensionality of the table is one more than that of a single row
+            if self.ndim is None:
+                self.ndim = len(self.shape)
+            elif self.ndim != len(self.shape):
+                raise ValueError(f'Shape={shape} and ndim={ndim} do not match')
+        else:
+            # simple column by default
+            if self.ndim is None:
+                self.ndim = 0
 
     def __get__(self, instance, owner=None):
         # class attribute access
@@ -72,12 +113,52 @@ class Column(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def tform_code():
-        ''' The TFORM code of this column, e.g. D for double'''
+    def dtype():
+        '''Equivalent numpy dtype'''
 
-    @abstractmethod
-    def validate_data(data):
-        '''Validate the data stored in this column'''
+    def validate_data(self, data):
+        ''' Validate the data of this column in table '''
+        if data is None:
+            if self.required:
+                raise RequiredMissing('Column {self.name} is required but missing')
+            else:
+                return
+
+        # let's test first for the datatype
+        try:
+            # casting = 'safe' makes sure we don't change values
+            # e.g. casting doubles to integers will no longer work
+            data = np.asanyarray(data).astype(self.dtype, casting='safe')
+        except TypeError as e:
+            raise WrongType('dtype not convertible to column dtype') from e
+
+        if self.strict_unit and hasattr(data, 'unit') and data.unit != self.unit:
+            raise WrongUnit(
+                f'Unit {data.unit} of data does not match specified unit {self.unit}'
+            )
+
+        # a table as one dimension more than it's rows,
+        # we also allow a single scalar value for scalar rows
+        if data.ndim != self.ndim + 1 and not (data.ndim == 0 and self.ndim == 0):
+            raise WrongDims(
+                f'Dimensionality of rows is {data.ndim - 1}, should be {self.ndim}'
+            )
+
+        # the rest of the tests is done on a quantity object with correct dtype
+        try:
+            q = u.Quantity(
+                data, self.unit, copy=False, ndmin=self.ndim + 1, dtype=self.dtype
+            )
+        except u.UnitConversionError as e:
+            raise WrongUnit(str(e)) from None
+
+        shape = q.shape[1:]
+        if self.shape is not None and self.shape != shape:
+            raise WrongShape(
+                f'Shape {shape} does not match required shape {self.shape}'
+            )
+
+        return q
 
 
 class BinaryTableMeta(type):
@@ -122,14 +203,7 @@ class BinaryTableMeta(type):
 class BinaryTable(metaclass=BinaryTableMeta):
     '''
     Schema definition class for a binary table
-
-    Attributes
-    ----------
-    validate_column_order: bool
-        If True, validate that the columns are in the same order
-        as in the schema definition.
     '''
-    validate_column_order = False
 
     def __init__(self, **column_data):
         self.__data__ = {}
@@ -166,147 +240,69 @@ class BinaryTable(metaclass=BinaryTableMeta):
                 col.validate_data(table[k])
 
 
-class PrimitiveColumn(Column):
-    '''
-    A column consisting of a primitive data type or fixed shape array.
-    All non-variable-length array column types
-
-    Attributes
-    ----------
-    unit: astropy.units.Unit
-        unit of the column
-    required: bool
-        If this column is required (True) or optional (False)
-    ndim: int
-        Dimensionality of a single row, numbers have ndim=0.
-        The resulting data column has `ndim_col = ndim + 1`
-    shape: Tuple[int]
-        Shape of a single row.
-    '''
-    def __init__(self, unit=None, required=True, ndim=None, shape=None):
-        super().__init__(required=required, unit=unit)
-
-        self.shape = shape
-        self.ndim = ndim
-
-        if self.shape is not None:
-            self.shape = tuple(shape)
-            # Dimensionality of the table is one more than that of a single row
-            if self.ndim is None:
-                self.ndim = len(self.shape)
-            elif self.ndim != len(self.shape):
-                raise ValueError(f'Shape={shape} and ndim={ndim} do not match')
-        else:
-            # simple column by default
-            if self.ndim is None:
-                self.ndim = 0
-
-    @property
-    @abstractmethod
-    def dtype():
-        '''Equivalent numpy dtype'''
-
-    def validate_data(self, data):
-        ''' Validate the data of this column in table '''
-        if data is None:
-            if self.required:
-                raise RequiredMissing('Column {self.name} is required but missing')
-            else:
-                return
-
-        # let's test first for the datatype
-        try:
-            # casting = 'safe' makes sure we don't change values
-            # e.g. casting doubles to integers will no longer work
-            data = np.asanyarray(data).astype(self.dtype, casting='safe')
-        except TypeError as e:
-            raise WrongType('dtype not convertible to column dtype') from e
-
-        # a table as one dimension more than it's rows,
-        # we also allow a single scalar value for scalar rows
-        if data.ndim != self.ndim + 1 and not (data.ndim == 0 and self.ndim == 0):
-            raise WrongDims(
-                f'Dimensionality of rows is {data.ndim - 1}, should be {self.ndim}'
-            )
-
-        # the rest of the tests is done on a quantity object with correct dtype
-        try:
-            q = u.Quantity(
-                data, self.unit, copy=False, ndmin=self.ndim + 1, dtype=self.dtype
-            )
-        except u.UnitConversionError as e:
-            raise WrongUnit(str(e)) from None
-
-        shape = q.shape[1:]
-        if self.shape is not None and self.shape != shape:
-            raise WrongShape(
-                f'Shape {shape} does not match required shape {self.shape}'
-            )
-
-        return q
 
 
-class Bool(PrimitiveColumn):
+class Bool(Column):
     '''A Boolean binary table column'''
     tform_code = 'L'
     dtype = np.bool
 
 
-class BitField(PrimitiveColumn):
+class BitField(Column):
     '''Bitfield binary table column'''
     tform_code = 'X'
     dtype = np.bool
 
 
-class Byte(PrimitiveColumn):
+class Byte(Column):
     '''Byte binary table column'''
     tform_code = 'B'
     dtype = np.uint8
 
 
-class Int16(PrimitiveColumn):
+class Int16(Column):
     '''16 Bit signed integer binary table column'''
     tform_code = 'I'
     dtype = np.int16
 
 
-class Int32(PrimitiveColumn):
+class Int32(Column):
     '''32 Bit signed integer binary table column'''
     tform_code = 'J'
     dtype = np.int32
 
 
-class Int64(PrimitiveColumn):
+class Int64(Column):
     '''64 Bit signed integer binary table column'''
     tform_code = 'K'
     dtype = np.int64
 
 
-class Char(PrimitiveColumn):
+class Char(Column):
     '''Single byte character binary table column'''
     tform_code = 'A'
     dtype = np.dtype('S1')
 
 
-class Float(PrimitiveColumn):
+class Float(Column):
     '''Single precision floating point binary table column'''
     tform_code = 'E'
     dtype = np.float32
 
 
-class Double(PrimitiveColumn):
+class Double(Column):
     '''Single precision floating point binary table column'''
     tform_code = 'D'
     dtype = np.float64
 
 
-class ComplexFloat(PrimitiveColumn):
+class ComplexFloat(Column):
     '''Single precision complex binary table column'''
     tform_code = 'C'
     dtype = np.csingle
 
 
-class ComplexDouble(PrimitiveColumn):
+class ComplexDouble(Column):
     '''Single precision complex binary table column'''
     tform_code = 'M'
     dtype = np.cdouble
