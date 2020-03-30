@@ -240,8 +240,6 @@ class BinaryTable(metaclass=BinaryTableMeta):
                 col.validate_data(table[k])
 
 
-
-
 class Bool(Column):
     '''A Boolean binary table column'''
     tform_code = 'L'

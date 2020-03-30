@@ -1,6 +1,5 @@
 import logging
 import pytest
-import warnings
 from fits_schema.exceptions import AdditionalHeaderCard
 
 
