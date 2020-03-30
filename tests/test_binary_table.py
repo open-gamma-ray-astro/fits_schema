@@ -15,11 +15,27 @@ def test_unit():
     class TestTable(BinaryTable):
         test = Double(unit=u.m)
 
+    # allow no units
     table = TestTable(test=[1, 2, 3])
     table.validate_data()
     assert (table.test == u.Quantity([1, 2, 3], u.m)).all()
 
+    # convertible unit
+    table = TestTable(test=[1, 2, 3] * u.cm)
+    table.validate_data()
+
     table = TestTable(test=5 * u.deg)
+    with pytest.raises(WrongUnit):
+        table.validate_data()
+
+    # validate no unit is enforced:
+    class TestTable(BinaryTable):
+        test = Double(unit=u.dimensionless_unscaled)
+
+    table = TestTable(test=[1, 2, 3])
+    table.validate_data()
+
+    table = TestTable(test=[1, 2, 3] * u.deg)
     with pytest.raises(WrongUnit):
         table.validate_data()
 
@@ -47,11 +63,11 @@ def test_access():
 
     t = TestTable()
     assert t.test is None
-    t.test = 5.0
-    assert t.test == 5.0
+    t.test = [5.0]
+    assert t.test[0] == 5.0
 
     # assignment does not validate
-    t.test == 'foo'
+    t.test == ['foo']
 
     del t.test
     assert t.test is None
@@ -79,6 +95,48 @@ def test_shape():
 
     # this should work
     table = TestTable(test=[np.arange(10), np.random.normal(size=10)])
+    table.validate_data()
+
+
+def test_ndim():
+    from fits_schema.binary_table import BinaryTable, Double
+
+    class TestTable(BinaryTable):
+        test = Double(ndim=2)
+
+    # single numbers
+    table = TestTable(test=[1, 2, 3])
+    with pytest.raises(WrongDims):
+        table.validate_data()
+
+    # 1d
+    table = TestTable(test=[
+        [1, 2, 3],
+        [4, 5, 6],
+    ])
+    with pytest.raises(WrongDims):
+        table.validate_data()
+
+    # each row is 2d, fits
+    table = TestTable(test=[
+        np.random.normal(size=(5, 3)),
+        np.random.normal(size=(5, 3))
+    ])
+    table.validate_data()
+
+    # 3d not
+    table = TestTable(test=[
+        np.zeros((2, 2, 2)),
+        np.ones((2, 2, 2))
+    ])
+    with pytest.raises(WrongDims):
+        table.validate_data()
+
+    class TestTable(BinaryTable):
+        test = Double()
+
+    # check a single number is allowed for normal columns
+    table = TestTable(test=5)
     table.validate_data()
 
 

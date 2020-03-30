@@ -170,17 +170,36 @@ class PrimitiveColumn(Column):
     '''
     A column consisting of a primitive data type or fixed shape array.
     All non-variable-length array column types
+
+    Attributes
+    ----------
+    unit: astropy.units.Unit
+        unit of the column
+    required: bool
+        If this column is required (True) or optional (False)
+    ndim: int
+        Dimensionality of a single row, numbers have ndim=0.
+        The resulting data column has `ndim_col = ndim + 1`
+    shape: Tuple[int]
+        Shape of a single row.
     '''
     def __init__(self, unit=None, required=True, ndim=None, shape=None):
         super().__init__(required=required, unit=unit)
 
-        self.shape = tuple(shape) if shape is not None else None
+        self.shape = shape
+        self.ndim = ndim
 
         if self.shape is not None:
+            self.shape = tuple(shape)
             # Dimensionality of the table is one more than that of a single row
-            self.ndim = len(self.shape) + 1
+            if self.ndim is None:
+                self.ndim = len(self.shape)
+            elif self.ndim != len(self.shape):
+                raise ValueError(f'Shape={shape} and ndim={ndim} do not match')
         else:
-            self.ndim = 1
+            # simple column by default
+            if self.ndim is None:
+                self.ndim = 0
 
     @property
     @abstractmethod
@@ -203,23 +222,25 @@ class PrimitiveColumn(Column):
         except TypeError as e:
             raise WrongType('dtype not convertible to column dtype') from e
 
+        # a table as one dimension more than it's rows,
+        # we also allow a single scalar value for scalar rows
+        if data.ndim != self.ndim + 1 and not (data.ndim == 0 and self.ndim == 0):
+            raise WrongDims(
+                f'Dimensionality of rows is {data.ndim - 1}, should be {self.ndim}'
+            )
+
         # the rest of the tests is done on a quantity object with correct dtype
         try:
             q = u.Quantity(
-                data, self.unit, copy=False, ndmin=1, dtype=self.dtype
+                data, self.unit, copy=False, ndmin=self.ndim + 1, dtype=self.dtype
             )
         except u.UnitConversionError as e:
             raise WrongUnit(str(e)) from None
 
-        if q.ndim != self.ndim:
-            raise WrongDims(
-                f'Dimensionality of data is {q.ndim}, should be {self.ndim}'
-            )
-
         shape = q.shape[1:]
         if self.shape is not None and self.shape != shape:
             raise WrongShape(
-                'Shape {shape} does not match required shape {self.shape}'
+                f'Shape {shape} does not match required shape {self.shape}'
             )
 
         return q
