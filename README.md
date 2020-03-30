@@ -15,8 +15,8 @@ from astropy.io import fits
 class Events(BinaryTable):
     '''A Binary Table of Events'''
     energy = Double(unit=u.TeV)
-    ra = Double(unit=u.deg)
-    dec = Double(unit=u.deg)
+    ra     = Double(unit=u.deg)
+    dec    = Double(unit=u.deg)
 
     class __header__(HeaderSchema):
         EXTNAME = HeaderCard(allowed_values='events')
