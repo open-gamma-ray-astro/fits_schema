@@ -157,3 +157,27 @@ def test_additional():
 
     with pytest.warns(AdditionalHeaderCard):
         Header.validate_header(h)
+
+
+def test_case():
+    from fits_schema.header import HeaderSchema, HeaderCard
+
+    class Header(HeaderSchema):
+        TEST = HeaderCard(allowed_values={'foo'})
+
+    h = fits.Header()
+    h['TEST'] = 'foo'
+    Header.validate_header(h)
+
+    h['TEST'] = 'Foo'
+    Header.validate_header(h)
+
+    h['TEST'] = 'FOO'
+    Header.validate_header(h)
+
+    class Header(HeaderSchema):
+        TEST = HeaderCard(allowed_values={'foo'}, case_insensitive=False)
+
+    h['TEST'] = 'Foo'
+    with pytest.raises(WrongValue):
+        Header.validate_header(h)

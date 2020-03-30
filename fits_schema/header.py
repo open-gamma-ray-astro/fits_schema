@@ -45,11 +45,13 @@ class HeaderCard:
     empty: True, False or None
         If True, value must be empty, if False must not be empty,
         if None, no check if a value is present is performed
+    case_insensitive: True
+        match str values case insensitively
     '''
     def __init__(
         self, keyword=None, *, required=True,
         allowed_values=None, position=None, type_=None,
-        empty=None,
+        empty=None, case_insensitive=True,
     ):
         self.keyword = None
         if keyword is not None:
@@ -58,6 +60,7 @@ class HeaderCard:
         self.required = required
         self.position = position
         self.empty = empty
+        self.case_insensitive = case_insensitive
 
         vals = allowed_values
         if vals is not None:
@@ -65,6 +68,9 @@ class HeaderCard:
                 vals = {vals}
             else:
                 vals = set(vals)
+
+            if self.case_insensitive:
+                vals = set(v.upper() if isinstance(v, str) else v for v in vals)
 
             if not all(isinstance(v, HEADER_ALLOWED_TYPES) for v in vals):
                 raise ValueError(f'Values must be instances of {HEADER_ALLOWED_TYPES}')
@@ -118,14 +124,19 @@ class HeaderCard:
             )
             log_or_raise(msg, WrongType, log, onerror=onerror)
 
-        if self.allowed_values is not None and card.value not in self.allowed_values:
-            log_or_raise(
-                f'Possible values for {k!r} are {self.allowed_values}'
-                f', found {card.value!r}',
-                WrongValue,
-                log,
-                onerror=onerror
-            )
+        if self.allowed_values is not None:
+            if self.case_insensitive and isinstance(card.value, str):
+                val = card.value.upper()
+            else:
+                val = card.value
+            if val not in self.allowed_values:
+                log_or_raise(
+                    f'Possible values for {k!r} are {self.allowed_values}'
+                    f', found {card.value!r}',
+                    WrongValue,
+                    log,
+                    onerror=onerror
+                )
 
         has_value = not (card.value is None or isinstance(card.value, fits.Undefined))
         if self.empty is True and has_value:
