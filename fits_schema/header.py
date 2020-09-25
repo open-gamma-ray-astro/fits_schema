@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 
 HEADER_ALLOWED_TYPES = (str, bool, int, float, complex, date, datetime)
-TABLE_KEYWORDS = {'TTYPE', 'TUNIT', 'TFORM', 'TSCAL', 'TZERO', 'TDISP'}
+TABLE_KEYWORDS = {'TTYPE', 'TUNIT', 'TFORM', 'TSCAL', 'TZERO', 'TDISP', 'TDIM'}
 IGNORE = TABLE_KEYWORDS
 
 

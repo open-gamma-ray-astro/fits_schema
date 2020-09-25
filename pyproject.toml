@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fits_schema"
-version = "0.5.1"
+version = "0.5.2"
 description = ""
 authors = ["Maximilian Nöthe <maximilian.noethe@tu-dortmund.de>"]
 readme = "README.md"
