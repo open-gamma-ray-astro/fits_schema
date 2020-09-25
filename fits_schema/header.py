@@ -200,6 +200,8 @@ class HeaderSchema(metaclass=HeaderSchemaMeta):
     REFERENC = HeaderCard(type_=str, required=False)
     COMMENT  = HeaderCard(type_=str, required=False)
     HISTORY  = HeaderCard(type_=str, required=False)
+    CREATOR  = HeaderCard(type_=str, required=False)
+    PROGRAM  = HeaderCard(type_=str, required=False)
 
     # see table 22 of https://fits.gsfc.nasa.gov/standard40/fits_standard40aa-le.pdf
     DATE     = HeaderCard(type_=str, required=False)
@@ -243,7 +245,7 @@ class HeaderSchema(metaclass=HeaderSchemaMeta):
         for pos, card in enumerate(header.cards):
             kw = card.keyword
             if kw not in cls.__cards__:
-                if kw[:5] not in IGNORE:
+                if kw.rstrip('0123456789') not in IGNORE:
                     log_or_raise(
                         f'Unexpected header card "{str(card).strip()}"',
                         AdditionalHeaderCard,
