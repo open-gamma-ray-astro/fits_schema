@@ -116,11 +116,14 @@ class Column(metaclass=ABCMeta):
     def dtype():
         '''Equivalent numpy dtype'''
 
-    def validate_data(self, data):
+    def validate_data(self, data, onerror='raise'):
         ''' Validate the data of this column in table '''
         if data is None:
             if self.required:
-                raise RequiredMissing('Column {self.name} is required but missing')
+                log_or_raise(
+                    f'Column {self.name} is required but missing',
+                    RequiredMissing, log=log, onerror=onerror
+                )
             else:
                 return
 
@@ -130,18 +133,23 @@ class Column(metaclass=ABCMeta):
             # e.g. casting doubles to integers will no longer work
             data = np.asanyarray(data).astype(self.dtype, casting='safe')
         except TypeError as e:
-            raise WrongType('dtype not convertible to column dtype') from e
+            log_or_raise(
+                f'dtype not convertible to column dtype: {e}',
+                WrongType, log=log, onerror=onerror
+            )
 
         if self.strict_unit and hasattr(data, 'unit') and data.unit != self.unit:
-            raise WrongUnit(
-                f'Unit {data.unit} of data does not match specified unit {self.unit}'
+            log_or_raise(
+                f'Unit {data.unit} of data does not match specified unit {self.unit}',
+                WrongUnit, log=log, onerror=onerror,
             )
 
         # a table as one dimension more than it's rows,
         # we also allow a single scalar value for scalar rows
         if data.ndim != self.ndim + 1 and not (data.ndim == 0 and self.ndim == 0):
-            raise WrongDims(
-                f'Dimensionality of rows is {data.ndim - 1}, should be {self.ndim}'
+            log_or_raise(
+                f'Dimensionality of rows is {data.ndim - 1}, should be {self.ndim}',
+                WrongDims, log=log, onerror=onerror,
             )
 
         # the rest of the tests is done on a quantity object with correct dtype
@@ -150,12 +158,13 @@ class Column(metaclass=ABCMeta):
                 data, self.unit, copy=False, ndmin=self.ndim + 1, dtype=self.dtype
             )
         except u.UnitConversionError as e:
-            raise WrongUnit(str(e)) from None
+            log_or_raise(str(e), WrongUnit, log=log, onerror=onerror)
 
         shape = q.shape[1:]
         if self.shape is not None and self.shape != shape:
-            raise WrongShape(
-                f'Shape {shape} does not match required shape {self.shape}'
+            log_or_raise(
+                f'Shape {shape} does not match required shape {self.shape}',
+                WrongShape, log=log, onerror=onerror,
             )
 
         return q
@@ -237,7 +246,7 @@ class BinaryTable(metaclass=BinaryTableMeta):
         table = Table.read(hdu)
         for k, col in cls.__columns__.items():
             if k in table.columns:
-                col.validate_data(table[k])
+                col.validate_data(table[k], onerror=onerror)
 
 
 class Bool(Column):
