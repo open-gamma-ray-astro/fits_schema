@@ -252,13 +252,13 @@ class BinaryTable(metaclass=BinaryTableMeta):
 class Bool(Column):
     '''A Boolean binary table column'''
     tform_code = 'L'
-    dtype = np.bool
+    dtype = bool
 
 
 class BitField(Column):
     '''Bitfield binary table column'''
     tform_code = 'X'
-    dtype = np.bool
+    dtype = bool
 
 
 class Byte(Column):
