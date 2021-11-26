@@ -17,10 +17,6 @@ flake8 = "^3.7.9"
 pytest-cov = "^2.8"
 ipython = "^7.13.0"
 
-[tool.poetry.extras]
-# additional packages needed on travis
-travis = ["codecov"]
-
 [build-system]
-requires = ["poetry>=1.0"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
