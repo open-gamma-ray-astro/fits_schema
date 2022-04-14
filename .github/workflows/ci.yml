@@ -23,12 +23,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install poetry
-          poetry install
+          pip install -U pip
+          pip install ".[all]"
 
       - name: Tests
         run: |
-          poetry run python -m pytest \
+          python -m pytest \
             --doctest-modules \
             --cov fits_schema --cov-report=xml \
             tests fits_schema
